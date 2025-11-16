@@ -54,6 +54,7 @@ func addScoreHandler(w http.ResponseWriter, r *http.Request) {
 
 	if body.Score < 0 {
 		http.Error(w, "Score must be positive", http.StatusBadRequest)
+		return
 	}
 
 	store.SetScore(body.Player, body.Score)
