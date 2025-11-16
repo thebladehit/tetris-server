@@ -5,37 +5,37 @@ import (
 	"sync"
 )
 
-type RatingStore struct {
-	mu      sync.RWMutex
-	ratings map[string]int
+type ScoreStore struct {
+	mu     sync.RWMutex
+	scores map[string]int
 }
 
-func NewRatingStore() *RatingStore {
-	return &RatingStore{
-		ratings: make(map[string]int),
+func NewScoreStore() *ScoreStore {
+	return &ScoreStore{
+		scores: make(map[string]int),
 	}
 }
 
-func (s *RatingStore) SetRating(player string, rating int) {
+func (s *ScoreStore) SetScore(player string, rating int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.ratings[player] = rating
+	s.scores[player] = rating
 }
 
-func (s *RatingStore) GetRating(limit int) []map[string]interface{} {
+func (s *ScoreStore) GetRating(limit int) []map[string]interface{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	list := make([]map[string]interface{}, 0, len(s.ratings))
-	for player, rating := range s.ratings {
+	list := make([]map[string]interface{}, 0, len(s.scores))
+	for player, rating := range s.scores {
 		list = append(list, map[string]interface{}{
 			"player": player,
-			"rating": rating,
+			"score":  rating,
 		})
 	}
 
 	sort.Slice(list, func(i, j int) bool {
-		return list[i]["rating"].(int) > list[j]["rating"].(int)
+		return list[i]["score"].(int) > list[j]["score"].(int)
 	})
 
 	if limit > len(list) {

@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
-var store = NewRatingStore()
+var store = NewScoreStore()
 
 func health(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -19,15 +22,23 @@ func health(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-func addRatingHandler(w http.ResponseWriter, r *http.Request) {
+func addScoreHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
+	secret := os.Getenv("SECRET")
+	headerSecret := r.Header.Get("android-secret")
+
+	if headerSecret != secret {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	type reqBody struct {
 		Player string `json:"player"`
-		Rating int    `json:"rating"`
+		Score  int    `json:"score"`
 	}
 
 	var body reqBody
@@ -41,13 +52,17 @@ func addRatingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	store.SetRating(body.Player, body.Rating)
+	if body.Score < 0 {
+		http.Error(w, "Score must be positive", http.StatusBadRequest)
+	}
+
+	store.SetScore(body.Player, body.Score)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "ok",
 		"player": body.Player,
-		"rating": body.Rating,
+		"score":  body.Score,
 	})
 }
 
@@ -68,16 +83,16 @@ func getRatingsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/health", health)
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalln("No .env file found")
+	}
 
-	store.SetRating("Bogdan", 1500)
-	store.SetRating("Anna", 1600)
-	store.SetRating("Mike", 1400)
-	store.SetRating("Sara", 1700)
+	http.HandleFunc("/health", health)
 
 	http.HandleFunc("/rating", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			addRatingHandler(w, r)
+			addScoreHandler(w, r)
 		} else if r.Method == http.MethodGet {
 			getRatingsHandler(w, r)
 		} else {
